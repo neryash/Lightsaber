@@ -30,148 +30,146 @@ import android.widget.Toast;
 
 import static androidx.constraintlayout.solver.SolverVariable.Type.CONSTANT;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener{
+public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadCompleteListener {
 
-    private SensorManager senSensorManager;
-    private Sensor senAccelerometer,sigSense;
-    private MediaPlayer player;
+    private static final int PRIORITY_HIGH = 2;
+    private static final int PRIORITY_LOW = 1;
+    private static final int PLAY_ONCE = 0;
+    private static final int LOOP = -1;
+    private static final float RATE_NORMAL = 1f;
+
+    private SensorManager mSensorManager;
+    private Sensor mGyroSensor;
+    private Sensor mProximitySensor;
+
     private SoundPool mSoundPool;
-    private int sound1,sound2,onSound,offSound,clash;
-    AudioManager mAudioManager;
-    private long lastTime;
-    private int id,humId;
-    private boolean isOn = false;
-    private float lastSense;
+    private int mSoundOn;
+    private boolean isOn;
+    private int mSoundHit;
+    private int mSoundHum = 0;
+    private int mDarkHumId = 0;
+    private int mLightHumId = 0;
+    private int clash = 0;
+    private int offSound = 0;
     private ImageView saber;
-    private TriggerEventListener triggerEventListener;
-    //private Sensor proximity;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-        startService();
-//        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-//        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        lastTime = System.currentTimeMillis();
-        saber = findViewById(R.id.saber);
-        lastSense = 0;
-        senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        //proximity = senSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        senSensorManager.registerListener((SensorEventListener) this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
-        //senSensorManager.registerListener((SensorEventListener) this, proximity , SensorManager.SENSOR_DELAY_NORMAL);
-        mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        sigSense = senSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-//        triggerEventListener = new TriggerEventListener() {
-//            @Override
-//            public void onTrigger(TriggerEvent event) {
-//                Log.i("a","sig");
-//            }
-//        };
-        //senSensorManager.requestTriggerSensor(triggerEventListener, sigSense);
-        mAudioManager.setStreamVolume(
-                AudioManager.STREAM_MUSIC, // Stream type
-                0, // Index 15
-                AudioManager.FLAG_PLAY_SOUND // Flags
-        );
-        saber.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openSaber();
-            }
-        });
-        int media_max_volume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        Log.i("vol",media_max_volume + "");
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .setUsage(AudioAttributes.USAGE_GAME)
-                    .build();
-
-            mSoundPool = new SoundPool.Builder()
-                    .setMaxStreams(20)
-                    .setAudioAttributes(audioAttributes)
-                    .build();
-        }
-        findViewById(R.id.stop).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopService(new Intent(MainActivity.this,ForceService.class));
-                startService();
-            }
-        });
-        sound1 = mSoundPool.load(this, R.raw.hum,1);
-        sound2 = mSoundPool.load(this, R.raw.hum_high,1);
-        onSound = mSoundPool.load(this, R.raw.saber_on,1);
-        offSound = mSoundPool.load(this, R.raw.saber_off,1);
+        mSoundPool = new SoundPool(4, AudioManager.STREAM_MUSIC, 0);
+        mSoundPool.setOnLoadCompleteListener(this);
+        mSoundHum = mSoundPool.load(this, R.raw.hum, 1);
+        mSoundHit = mSoundPool.load(this, R.raw.lswall01, 1);
+        mSoundOn = mSoundPool.load(this, R.raw.lightsaber_ignites, 1);
         clash = mSoundPool.load(this, R.raw.clash,1);
+        offSound = mSoundPool.load(this, R.raw.saber_off,1);
+
+        saber =findViewById(R.id.saber);
+        isOn = false;
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        mGyroSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        mProximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
     }
+
+    private SensorEventListener mGyroListener = new SensorEventListener() {
+
+        private boolean mHitStarted = false;
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            // Not used
+        }
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+
+            // Rotational speed
+            float[] values = event.values;
+            float x = values[0];
+            float z = values[2];
+
+            float zStrength = z * z;
+//            if (zStrength > 150f && !mHitStarted) {
+//                mSoundPool.play(mSoundHit, 0.5f, 0.5f, PRIORITY_LOW, PLAY_ONCE, RATE_NORMAL);
+//                mHitStarted = true;
+//            } else {
+//                mHitStarted = false;
+//            }
+
+            float strength = (zStrength + x * x) / 145f;
+            float lightVolume = Math.min(strength + 0.1f, 1f); // 0.1 to 1.0
+            float darkVolume = Math.max(0.4f - strength, 0.1f); // 0.4 to 0.1
+            float rate = Math.min(strength / 2f + 1f, 1.2f); // 1.0 to 1.2
+
+            if (mLightHumId != 0) {
+                mSoundPool.setVolume(mLightHumId, lightVolume, lightVolume);
+                mSoundPool.setRate(mDarkHumId, rate);
+                mSoundPool.setVolume(mDarkHumId, darkVolume, darkVolume);
+            }
+        }
+    };
+
+    private SensorEventListener mProximityListener = new SensorEventListener() {
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            // Not used
+        }
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            float distance = event.values[0];
+
+            if (mLightHumId != 0 && distance < 1f) {
+                //mSoundPool.play(mSoundHit, 0.5f, 0.5f, PRIORITY_LOW, PLAY_ONCE, RATE_NORMAL);
+            }
+        }
+    };
     private void openSaber(){
         if (!isOn){
-            mSoundPool.play(onSound, 0.5f, 0.5f, 1, 0, 1.0f);
-            id = mSoundPool.play(sound2, 1.0f, 1.0f, 1, -1, 1.0f);
-            humId = mSoundPool.play(sound1, 0.5f, 0.5f, 1, -1, 1.0f);
             saber.setImageResource(R.drawable.saber_on);
             isOn = true;
+            startSound();
         }else{
-            mSoundPool.pause(id);
-            mSoundPool.pause(humId);
             mSoundPool.play(offSound, 0.2f, 0.2f, 1, 0, 1.0f);
             saber.setImageResource(R.drawable.saber_off);
             isOn = false;
+            stopSound();
         }
         Log.i("hell","started");
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(mGyroListener, mGyroSensor, SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(mProximityListener, mProximitySensor,
+                SensorManager.SENSOR_DELAY_UI);
+        if (mDarkHumId == 0) {
+            //startSound();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(mGyroListener, mGyroSensor);
+        mSensorManager.unregisterListener(mProximityListener, mProximitySensor);
+        stopSound();
+    }
+
+    @Override
+    public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
+        if (mDarkHumId == 0 && sampleId == mSoundOn) {
+
+        }
     }
     private void clash(){
         if(isOn){
             mSoundPool.play(clash, 1f, 1f, 1, 0, 1.0f);
         }
-    }
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-        Sensor mySensor = sensorEvent.sensor;
-        if(mySensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
-        {
-            Log.i("hey",sensorEvent.values[0] + " " + sensorEvent.values[1] + " " + sensorEvent.values[2]);
-            //Toast.makeText(MainActivity.this, sensorEvent.values[0] + "", Toast.LENGTH_SHORT).show();
-        }
-        if(mySensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
-            float x = sensorEvent.values[0];
-            float y = sensorEvent.values[1];
-            float z = sensorEvent.values[2];
-            long curTime = System.currentTimeMillis();
-            int xa = (int) Math.floor(x);
-            int fVol = (Math.abs(xa * 4));
-            float volume;
-            if(fVol > 0.3){
-                volume = fVol/100f;
-            }else{
-                volume = 0f;
-            }
-            if(curTime -lastTime > 200){
-//                mAudioManager.setStreamVolume(
-//                        AudioManager.STREAM_MUSIC, // Stream type
-//                        Math.abs((int) (Math.floor(x)+1)), // Index
-//                        AudioManager.FLAG_SHOW_UI // Flags
-//                );\
-                mSoundPool.setVolume(id,volume,volume);
-                if(Math.abs(xa-lastSense) > 15f){
-
-                }
-                lastTime = curTime;
-                lastSense = xa;
-            }
-        }
-        //play();
-    }
-    public void startService() {
-        Log.i("start","start");
-        Intent serviceIntent = new Intent(this, ForceService.class);
-        MainActivity.this.startService(serviceIntent);
     }
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
@@ -185,25 +183,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return super.onKeyDown(keyCode,event);
         }
     }
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
+    private void startSound() {
+        mSoundPool.play(mSoundOn, 0.5f, 0.5f, PRIORITY_HIGH, PLAY_ONCE, RATE_NORMAL);
+        mDarkHumId = mSoundPool.play(mSoundHum, 0.4f, 0.4f, PRIORITY_HIGH, LOOP, RATE_NORMAL);
+        mLightHumId = mSoundPool.play(mSoundHum, 0.1f, 0.1f, PRIORITY_HIGH, LOOP, 1.2f);
     }
 
-    @Override
-    protected void onDestroy() {
-        mSoundPool.release();
-        super.onDestroy();
-    }
-
-    protected void onPause() {
-        super.onPause();
-        senSensorManager.unregisterListener(this);
-    }
-    protected void onResume() {
-        super.onResume();
-        senSensorManager.registerListener((SensorEventListener) this, senAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        senSensorManager.registerListener((SensorEventListener) this, sigSense, SensorManager.SENSOR_DELAY_NORMAL);
-        //senSensorManager.registerListener((SensorEventListener) this, proximity , SensorManager.SENSOR_DELAY_NORMAL);
+    private void stopSound() {
+        mSoundPool.stop(mDarkHumId);
+        mSoundPool.stop(mLightHumId);
+        mDarkHumId = 0;
+        mLightHumId = 0;
     }
 }
