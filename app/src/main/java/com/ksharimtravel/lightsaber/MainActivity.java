@@ -3,6 +3,7 @@ package com.ksharimtravel.lightsaber;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import android.animation.LayoutTransition;
 import android.content.Context;
 import android.app.Activity;
 import android.content.Context;
@@ -18,11 +19,15 @@ import android.media.AudioManager;
 import android.media.Image;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.os.Bundle;
 import android.view.View;
@@ -52,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
     private int clash = 0;
     private int offSound = 0;
     private ImageView saber;
+    private ImageView lightThingy;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,12 +72,19 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
         clash = mSoundPool.load(this, R.raw.clash,1);
         offSound = mSoundPool.load(this, R.raw.saber_off,1);
 
+        lightThingy = findViewById(R.id.lightThingy);
         saber =findViewById(R.id.saber);
         isOn = false;
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         mGyroSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         mProximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        saber.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openSaber();
+            }
+        });
     }
 
     private SensorEventListener mGyroListener = new SensorEventListener() {
@@ -132,11 +145,25 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
         if (!isOn){
             saber.setImageResource(R.drawable.saber_on);
             isOn = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
+                        .enableTransitionType(LayoutTransition.CHANGING);
+            }
+            //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            lightThingy.setVisibility(View.VISIBLE);
+            saber.setImageResource(R.drawable.saber_on);
             startSound();
         }else{
             mSoundPool.play(offSound, 0.2f, 0.2f, 1, 0, 1.0f);
             saber.setImageResource(R.drawable.saber_off);
             isOn = false;
+            lightThingy.setVisibility(View.GONE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
+                        .enableTransitionType(LayoutTransition.CHANGING);
+            }
+            //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(0,0));
+            saber.setImageResource(R.drawable.saber_off);
             stopSound();
         }
         Log.i("hell","started");
