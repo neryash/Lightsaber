@@ -1,23 +1,13 @@
 package com.ksharimtravel.lightsaber;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import android.animation.LayoutTransition;
-import android.content.Context;
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.TriggerEvent;
-import android.hardware.TriggerEventListener;
-import android.media.AudioAttributes;
 import android.media.AudioManager;
-import android.media.Image;
-import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.os.Build;
 import android.os.Bundle;
@@ -25,15 +15,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Toast;
-
-import static androidx.constraintlayout.solver.SolverVariable.Type.CONSTANT;
 
 public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadCompleteListener {
 
@@ -58,6 +40,9 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
     private int offSound = 0;
     private ImageView saber;
     private ImageView lightThingy;
+    private ImageView openClrs;
+    private boolean isClrsOpen;
+    private int colorOfSaber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,12 +51,15 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
 
         mSoundPool = new SoundPool(4, AudioManager.STREAM_MUSIC, 0);
         mSoundPool.setOnLoadCompleteListener(this);
-        mSoundHum = mSoundPool.load(this, R.raw.hum, 1);
+        mSoundHum = mSoundPool.load(this, R.raw.hum_r, 1);
         mSoundHit = mSoundPool.load(this, R.raw.lswall01, 1);
         mSoundOn = mSoundPool.load(this, R.raw.lightsaber_ignites, 1);
         clash = mSoundPool.load(this, R.raw.clash,1);
         offSound = mSoundPool.load(this, R.raw.saber_off,1);
+        isClrsOpen = false;
+        colorOfSaber = R.drawable.green_saber;
 
+        openClrs = findViewById(R.id.openClrs);
         lightThingy = findViewById(R.id.lightThingy);
         saber =findViewById(R.id.saber);
         isOn = false;
@@ -85,6 +73,66 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
                 openSaber();
             }
         });
+        findViewById(R.id.openClrsCont).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleColors();
+            }
+        });
+        findViewById(R.id.red).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                colorOfSaber = R.drawable.red_saber;
+                toggleColors();
+            }
+        });
+        findViewById(R.id.blue).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                colorOfSaber = R.drawable.blue_saber;
+                toggleColors();
+            }
+        });
+        findViewById(R.id.green).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                colorOfSaber = R.drawable.green_saber;
+                toggleColors();
+            }
+        });
+        findViewById(R.id.purple).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                colorOfSaber = R.drawable.purple_saber;
+                toggleColors();
+            }
+        });
+        findViewById(R.id.white).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                colorOfSaber = R.drawable.white_saber;
+                toggleColors();
+            }
+        });
+        findViewById(R.id.yellow).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                colorOfSaber = R.drawable.yellow_saber;
+                toggleColors();
+            }
+        });
+    }
+
+    private void toggleColors(){
+        if(!isClrsOpen){
+            findViewById(R.id.clrCont).setVisibility(View.VISIBLE);
+            openClrs.setImageResource(R.drawable.ic_baseline_arrow_drop_down_24);
+            isClrsOpen = true;
+        }else{
+            findViewById(R.id.clrCont).setVisibility(View.GONE);
+            openClrs.setImageResource(R.drawable.ic_baseline_arrow_drop_up_24);
+            isClrsOpen = false;
+        }
     }
 
     private SensorEventListener mGyroListener = new SensorEventListener() {
@@ -150,14 +198,18 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
                         .enableTransitionType(LayoutTransition.CHANGING);
             }
             //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            lightThingy.setImageResource(colorOfSaber);
             lightThingy.setVisibility(View.VISIBLE);
-            saber.setImageResource(R.drawable.saber_on);
+            findViewById(R.id.openClrsCont).setVisibility(View.GONE);
+            findViewById(R.id.helpBtn).setVisibility(View.GONE);
             startSound();
         }else{
             mSoundPool.play(offSound, 0.2f, 0.2f, 1, 0, 1.0f);
             saber.setImageResource(R.drawable.saber_off);
             isOn = false;
             lightThingy.setVisibility(View.GONE);
+            findViewById(R.id.openClrsCont).setVisibility(View.VISIBLE);
+            findViewById(R.id.helpBtn).setVisibility(View.VISIBLE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
                 ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
                         .enableTransitionType(LayoutTransition.CHANGING);
