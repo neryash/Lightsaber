@@ -1,8 +1,11 @@
-package com.ksharimtravel.lightsaber;
+package com.nerya.lightsaber;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.Constraints;
 
 import android.animation.LayoutTransition;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -16,6 +19,8 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadCompleteListener {
 
@@ -43,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
     private ImageView openClrs;
     private boolean isClrsOpen;
     private int colorOfSaber;
+    private boolean isHelpOpen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
 
         mSoundPool = new SoundPool(4, AudioManager.STREAM_MUSIC, 0);
         mSoundPool.setOnLoadCompleteListener(this);
+        isHelpOpen = false;
         mSoundHum = mSoundPool.load(this, R.raw.hum_r, 1);
         mSoundHit = mSoundPool.load(this, R.raw.lswall01, 1);
         mSoundOn = mSoundPool.load(this, R.raw.lightsaber_ignites, 1);
@@ -71,6 +78,18 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
             @Override
             public void onClick(View v) {
                 openSaber();
+            }
+        });
+        findViewById(R.id.helpBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleHelp();
+            }
+        });
+        findViewById(R.id.closeHelp).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleHelp();
             }
         });
         findViewById(R.id.openClrsCont).setOnClickListener(new View.OnClickListener() {
@@ -123,6 +142,25 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
         });
     }
 
+    private void toggleHelp(){
+        if(!isHelpOpen){
+            findViewById(R.id.helpcont).setVisibility(View.VISIBLE);
+            isHelpOpen = true;
+        }else{
+            findViewById(R.id.helpcont).setVisibility(View.GONE);
+            isHelpOpen = false;
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if(isHelpOpen){
+            toggleHelp();
+        }else{
+            super.onBackPressed();
+        }
+    }
+
     private void toggleColors(){
         if(!isClrsOpen){
             findViewById(R.id.clrCont).setVisibility(View.VISIBLE);
@@ -150,6 +188,7 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
             // Rotational speed
             float[] values = event.values;
             float x = values[0];
+            float y = values[1];
             float z = values[2];
 
             float zStrength = z * z;
@@ -170,6 +209,15 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
                 mSoundPool.setRate(mDarkHumId, rate);
                 mSoundPool.setVolume(mDarkHumId, darkVolume, darkVolume);
             }
+            ImageView stars = findViewById(R.id.allStars);
+            ConstraintLayout.LayoutParams lp = (ConstraintLayout.LayoutParams) stars.getLayoutParams();
+//            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) stars.getLayoutParams();
+//            params.setMargins(0, 0, Math.round(x), 0); //substitute parameters for left, top, right, bottom
+//            stars.setLayoutParams(params);
+            int b = Math.round(y * 4);
+            int c = Math.round(x * 4);
+            Log.i("helloa",c + " a");
+            stars.setPadding(stars.getPaddingLeft()+b,stars.getPaddingTop()+c, stars.getPaddingRight()-b, stars.getPaddingBottom()-c);
         }
     };
 
@@ -190,35 +238,36 @@ public class MainActivity extends AppCompatActivity implements SoundPool.OnLoadC
         }
     };
     private void openSaber(){
-        if (!isOn){
-            saber.setImageResource(R.drawable.saber_on);
-            isOn = true;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
-                        .enableTransitionType(LayoutTransition.CHANGING);
+        if(!isHelpOpen){
+            if (!isOn){
+                saber.setImageResource(R.drawable.saber_on);
+                isOn = true;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
+                            .enableTransitionType(LayoutTransition.CHANGING);
+                }
+                //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+                lightThingy.setImageResource(colorOfSaber);
+                lightThingy.setVisibility(View.VISIBLE);
+                findViewById(R.id.openClrsCont).setVisibility(View.GONE);
+                findViewById(R.id.helpBtn).setVisibility(View.GONE);
+                startSound();
+            }else{
+                mSoundPool.play(offSound, 0.2f, 0.2f, 1, 0, 1.0f);
+                saber.setImageResource(R.drawable.saber_off);
+                isOn = false;
+                lightThingy.setVisibility(View.GONE);
+                findViewById(R.id.openClrsCont).setVisibility(View.VISIBLE);
+                findViewById(R.id.helpBtn).setVisibility(View.VISIBLE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
+                            .enableTransitionType(LayoutTransition.CHANGING);
+                }
+                //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(0,0));
+                saber.setImageResource(R.drawable.saber_off);
+                stopSound();
             }
-            //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-            lightThingy.setImageResource(colorOfSaber);
-            lightThingy.setVisibility(View.VISIBLE);
-            findViewById(R.id.openClrsCont).setVisibility(View.GONE);
-            findViewById(R.id.helpBtn).setVisibility(View.GONE);
-            startSound();
-        }else{
-            mSoundPool.play(offSound, 0.2f, 0.2f, 1, 0, 1.0f);
-            saber.setImageResource(R.drawable.saber_off);
-            isOn = false;
-            lightThingy.setVisibility(View.GONE);
-            findViewById(R.id.openClrsCont).setVisibility(View.VISIBLE);
-            findViewById(R.id.helpBtn).setVisibility(View.VISIBLE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                ((ViewGroup) findViewById(R.id.light_cont)).getLayoutTransition()
-                        .enableTransitionType(LayoutTransition.CHANGING);
-            }
-            //lightThingy.setLayoutParams(new LinearLayout.LayoutParams(0,0));
-            saber.setImageResource(R.drawable.saber_off);
-            stopSound();
         }
-        Log.i("hell","started");
     }
     @Override
     protected void onResume() {

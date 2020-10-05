@@ -1,4 +1,4 @@
-package com.ksharimtravel.lightsaber;
+package com.nerya.lightsaber;
 
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -12,12 +12,11 @@ import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import static com.ksharimtravel.lightsaber.App.CHANNEL_ID;
+import static com.nerya.lightsaber.App.CHANNEL_ID;
 
 public class ForceService extends Service implements SensorEventListener{
     @Override

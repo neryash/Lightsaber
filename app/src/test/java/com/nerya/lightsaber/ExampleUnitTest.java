@@ -1,4 +1,4 @@
-package com.ksharimtravel.lightsaber;
+package com.nerya.lightsaber;
 
 import org.junit.Test;
 
